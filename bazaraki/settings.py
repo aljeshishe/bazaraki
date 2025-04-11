@@ -27,7 +27,7 @@ ROBOTSTXT_OBEY = True
 # See also autothrottle settings and docs
 #DOWNLOAD_DELAY = 3
 # The download delay setting will honor only one of:
-CONCURRENT_REQUESTS_PER_DOMAIN = 5
+CONCURRENT_REQUESTS_PER_DOMAIN = 10
 #CONCURRENT_REQUESTS_PER_IP = 16
 
 # Disable cookies (enabled by default)
@@ -91,50 +91,43 @@ ITEM_PIPELINES = {
 TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 FEED_EXPORT_ENCODING = "utf-8"
 
-
-
-import logging  
-
-# Scrapy settings for logging  
-LOG_ENABLED = True  
-LOG_LEVEL = 'DEBUG'  # Set the base log level to DEBUG  
-
-# Custom logging configuration  
-LOG_FILE = 'debug.log'  # File to store debug logs  
-
-# Configure logging  
-from logging.handlers import RotatingFileHandler  
-
-LOGGING = {  
-    'version': 1,  
-    'disable_existing_loggers': False,  
-    'formatters': {  
-        'default': {  
-            'format': '%(asctime)s [%(name)s] %(levelname)s: %(message)s',  
+# Disable scrapy logging configuration
+LOG_ENABLED = False  
+# Custom logging configuration
+from datetime import datetime, timezone
+NOW_STR = datetime.now(tz=timezone.utc).isoformat(sep=" ", timespec="seconds")
+DEFAULT_LOGGING = {  
+    "version": 1,  
+    "disable_existing_loggers": False,  
+    "formatters": {  
+        "default": {  
+            "format": "%(asctime)s [%(name)s] %(levelname)s: %(message)s",  
         },  
     },  
-    'handlers': {  
-        'console': {  
-            'level': 'INFO',  
-            'class': 'logging.StreamHandler',  
-            'formatter': 'default',  
+    "handlers": {  
+        "console": {  
+            "level": "WARN",  
+            "class": "logging.StreamHandler",  
+            "formatter": "default",  
         },  
-        'file': {  
-            'level': 'DEBUG',  
-            'class': 'logging.handlers.RotatingFileHandler',  
-            'formatter': 'default',  
-            'filename': 'output/logs/debug.log',  # File to store debug logs  
-            'maxBytes': 10 * 1024 * 1024,  # 10 MB per log file  
-            'backupCount': 5,  # Keep up to 5 backup files  
+        "file": {  
+            "level": "INFO",  
+            "class": "logging.handlers.RotatingFileHandler",  
+            "formatter": "default",  
+            "filename": f"output/logs/debug_{NOW_STR}.log",  # File to store debug logs  
+            "maxBytes": 10 * 1024 * 1024,  # 10 MB per log file  
+            "backupCount": 5,  # Keep up to 5 backup files  
         },  
     },  
-    'loggers': {  
-        'scrapy': {  
-            'handlers': ['console', 'file'],  
-            'level': 'DEBUG',  
-            'propagate': True,  
+    "loggers": {  
+        "root": {  
+            "handlers": ["console", "file"],  
+            "level": "DEBUG",  
+            "propagate": True,  
         },  
     },  
 }  
 from pathlib import Path
-Path(LOGGING["handlers"]["file"]["filename"]).parent.mkdir(parents=True, exist_ok=True)
+Path(DEFAULT_LOGGING["handlers"]["file"]["filename"]).parent.mkdir(parents=True, exist_ok=True)
+from scrapy.utils import log
+log.DEFAULT_LOGGING = DEFAULT_LOGGING
