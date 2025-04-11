@@ -4,6 +4,7 @@ import re
 import json
 from urllib.parse import urlparse
 from itemadapter import ItemAdapter
+import pandas as pd
 
 
 def escape(s):
@@ -21,7 +22,8 @@ class BazarakiPipeline:
 
     def close_spider(self, spider):
         self.file.close()
-        self.file_path.rename(self.file_path.with_suffix(".jsonl"))
+        pd.read_json(self.file_path, lines=True).to_parquet(self.file_path.with_suffix(".parquet"))
+        self.file_path.unlink()
         
 
     def process_item(self, item, spider):
