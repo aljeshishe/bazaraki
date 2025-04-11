@@ -1,0 +1,24 @@
+# We can be more selective with .dockerignore since we're mounting the project
+# Only exclude files needed for building the base image
+
+# Docker specific
+.dockerignore
+Dockerfile
+docker-compose.yml
+docker-compose.*.yml
+run.sh
+
+# Git
+.git
+
+# Editor directories and files
+.idea
+.vscode
+*.swp
+*.swo
+
+# Environment variables
+.env
+.env.*
+
+.venvd*

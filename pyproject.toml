@@ -21,6 +21,8 @@ datacompy = "^0.14.4"
 parse = "^1.20.2"
 jupyter = "^1.1.1"
 pandarallel = "^1.6.5"
+apscheduler = "^3.11.0"
+click = "^8.1.8"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -29,3 +31,6 @@ ipykernel = "^6.29.5"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+schedule = "bazaraki.schedule:cli"
