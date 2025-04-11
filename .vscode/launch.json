@@ -7,7 +7,7 @@
             "request": "launch",
             "program": "/home/ubuntu/bazaraki/.venv/bin/scrapy",
             "console": "integratedTerminal",
-            "args": "crawl property_spider -O test.jl -a debug=1 -a url=https://www.bazaraki.com/real-estate-to-rent/apartments-flats/",
+            "args": "crawl property_spider -a fast=1 -a urls=https://www.bazaraki.com/real-estate-to-rent,https://www.bazaraki.com/real-estate-for-sale",
             "justMyCode": false
         }
     ]
