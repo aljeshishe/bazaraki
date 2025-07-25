@@ -1,3 +1,4 @@
+from datetime import date, datetime, timedelta, timezone
 import re
 import scrapy
 from tqdm import tqdm
@@ -31,6 +32,29 @@ def get(response, selector, type=str, replace=None):
     result = type(result)
     return result 
 
+def normalize_posted(dt_str):
+    result = dt_str
+    if len(dt_str) == len("00:00"):
+        result = f"{date.today():%d.%m.%Y} {dt_str}"
+    elif "Yesterday" in dt_str:
+        yesterday_dt = date.today().replace(day=date.today().day-1)
+        result = f"{yesterday_dt:%d.%m.%Y} {dt_str.split()[1]}"
+    return result
+
+NOW = datetime.now()
+
+def normalize_posted(dt_str):
+    if "Yesterday" in dt_str:
+        hours, minutes = dt_str.split()[1].split(":")
+        result = (NOW - timedelta(days=1)).replace(hour=int(hours), minute=int(minutes))
+    elif len(dt_str) == len("00:00"):
+        hours, minutes = dt_str.split(":")
+        result = NOW.replace(hour=int(hours), minute=int(minutes))
+    else:
+        result = datetime.strptime(dt_str, "%d.%m.%Y %H:%M")
+    result = result.isoformat(timespec="seconds")
+    return result
+    
 class PropertySpider(scrapy.Spider):
     name = "property_spider"
 
@@ -41,8 +65,13 @@ class PropertySpider(scrapy.Spider):
         self.pb = tqdm(desc="Crawling Pages", unit="page", total=0) 
 
     def start_requests(self):
+        DEFAULT_REQUEST_HEADERS = {
+            "Host": "www.bazaraki.com",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0"
+        }
         for url in self.start_urls:
             self.logger.info(f"Starting to scrape {url}")
+            
             yield scrapy.Request(url, self.parse_start_page, priority=10)
     
     def parse_start_page(self, response):
@@ -84,7 +113,7 @@ class PropertySpider(scrapy.Spider):
             "lng": get(response, "div[id='geoMap']::attr(data-default-lng)"),
             "sold": bool(get(response, ".phone-author--sold")),
         }
-        
+        data["posted_dt"] = normalize_posted(data["posted"])
         categories = getall(response, "span[itemprop='name']::text")
         categories_map = {f"cat{i}": cat for i, cat in enumerate(categories[1:])}
         data.update(categories_map)

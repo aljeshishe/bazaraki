@@ -45,6 +45,9 @@ def read_jsonl_files(path: str):
     return merged
 
 def read_dfs(glob_pattern: str):
+    """Reads multiple files by glob_pattern.
+    For deleted items sets delete_date
+    """
     DT_LEN = len("2024-12-12 18:34:25")
     merged = pd.DataFrame()
     for file_name in sorted(glob(glob_pattern)):
@@ -85,3 +88,7 @@ def read_df(file_name: str | Path):
         return pd.read_parquet(file_path)
     else:
         raise ValueError(f"Unsupported file type: {file_path.suffix}")
+    
+def add_city_disctrict_cols(df):
+    df[["city", "district"]] = df.location.str.split(",", expand=True)
+    return df

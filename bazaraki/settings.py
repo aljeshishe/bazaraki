@@ -37,16 +37,24 @@ CONCURRENT_REQUESTS_PER_DOMAIN = 10
 #TELNETCONSOLE_ENABLED = False
 
 # Override the default request headers:
-#DEFAULT_REQUEST_HEADERS = {
+DEFAULT_REQUEST_HEADERS = {
+    "Host": "www.bazaraki.com",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0"
+    # "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+    # "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    # "Accept-Language": "en-US,en;q=0.5",
+    # "Connection": "keep-alive"
 #    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 #    "Accept-Language": "en",
-#}
+}
 
 # Enable or disable spider middlewares
 # See https://docs.scrapy.org/en/latest/topics/spider-middleware.html
-#SPIDER_MIDDLEWARES = {
-#    "bazaraki.middlewares.BazarakiSpiderMiddleware": 543,
-#}
+SPIDER_MIDDLEWARES = {
+   # "scrapy.downloadermiddlewares.defaultheaders.DefaultHeadersMiddleware": 0,
+
+   # "bazaraki.middlewares.BazarakiSpiderMiddleware": 543,
+}
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
