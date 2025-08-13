@@ -20,7 +20,7 @@ syncback:
 	aws s3 sync s3://ab-users/grachev/bazaraki/output output
 
 run_scheduled:
-	schedule -s "0 0 * * *" "make crawl sync"
+	schedule -s "0 0 */3 * *" "make crawl sync"
 
 # Docker commands without Docker Compose
 DOCKER_IMAGE_NAME=bazaraki
