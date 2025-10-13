@@ -39,29 +39,29 @@ jobs:
         poetry install --no-dev
         
     - name: Run scraper
+#        poetry run scrapy crawl property_spider -a  urls=https://www.bazaraki.com/real-estate-to-rent,https://www.bazaraki.com/real-estate-for-sale
       run: |
-        poetry run scrapy crawl property_spider -a  urls=https://www.bazaraki.com/real-estate-to-rent,https://www.bazaraki.com/real-estate-for-sale
-    # poetry run scrapy crawl property_spider -a fast=1 -a urls=https://www.bazaraki.com/real-estate-to-rent,https://www.bazaraki.com/real-estate-for-sale
+        poetry run scrapy crawl property_spider -a fast=1 -a urls=https://www.bazaraki.com/real-estate-to-rent,https://www.bazaraki.com/real-estate-for-sale
         
-    # - name: Configure AWS credentials
-    #   if: success()
-    #   uses: aws-actions/configure-aws-credentials@v4
-    #   with:
-    #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-    #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    #     aws-region: us-east-1  # Change this to your preferred region
+    - name: Configure AWS credentials
+      if: success()
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1  # Change this to your preferred region
         
-    # - name: Sync to S3
-    #   if: success()
-    #   run: |
-    #     poetry run aws s3 sync output s3://ab-users/grachev/bazaraki/output
+    - name: Sync to S3
+      if: success()
+      run: |
+        poetry run aws s3 sync output s3://ab-users/grachev/bazaraki/output_test
         
-    # - name: Upload artifacts on failure
-    #   if: failure()
-    #   uses: actions/upload-artifact@v3
-    #   with:
-    #     name: scraper-logs
-    #     path: |
-    #       **/*.log
-    #       output/
-    #     retention-days: 7
+    - name: Upload artifacts on failure
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: scraper-logs
+        path: |
+          **/*.log
+          output/
+        retention-days: 7
