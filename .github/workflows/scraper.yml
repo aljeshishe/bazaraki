@@ -56,12 +56,12 @@ jobs:
       run: |
         poetry run aws s3 sync output s3://ab-users/grachev/bazaraki/output_test
         
-    - name: Upload artifacts on failure
-      if: failure()
-      uses: actions/upload-artifact@v3
-      with:
-        name: scraper-logs
-        path: |
-          **/*.log
-          output/
-        retention-days: 7
+    # - name: Upload artifacts on failure
+    #   if: failure()
+    #   uses: actions/upload-artifact@v3
+    #   with:
+    #     name: scraper-logs
+    #     path: |
+    #       **/*.log
+    #       output/
+    #     retention-days: 7
