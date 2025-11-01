@@ -105,3 +105,12 @@ def read_df(file_name: str | Path):
 def add_city_disctrict_cols(df):
     df[["city", "district"]] = df.location.str.split(",", expand=True)
     return df
+
+def enrich(df):
+    """Enrich data frame with additional columns.
+    location -> city, district
+    price / Property area - price_per_sqm
+    """
+    df[["city", "district"]] = df.location.str.split(",", expand=True)
+    df["price_per_sqm"] = df.price / (df["Property area"]).round(2)
+    return df
