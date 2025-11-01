@@ -109,8 +109,8 @@ class PropertySpider(scrapy.Spider):
             "ad_id": get(response, "span[itemprop='sku']::text"),
             "reference_number": get(response, "span.reference-number::text"),
             "views": get(response, "span[class='counter-views']::text", replace="Views:", type=int),
-            "lat": get(response, "div[id='geoMap']::attr(data-default-lat)"),
-            "lng": get(response, "div[id='geoMap']::attr(data-default-lng)"),
+            "lat": get(response, "div[id='map']::attr(data-default-lat)"),
+            "lng": get(response, "div[id='map']::attr(data-default-lng)"),
             "sold": bool(get(response, ".phone-author--sold")),
         }
         data["posted_dt"] = normalize_posted(data["posted"])
