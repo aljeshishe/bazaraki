@@ -18,29 +18,17 @@ jobs:
       with:
         python-version: '3.10'
         
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
-      with:
-        version: 1.8.2
-        virtualenvs-create: true
-        virtualenvs-in-project: true
-        
-    - name: Cache Poetry dependencies
-      uses: actions/cache@v3
-      with:
-        path: .venv
-        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-poetry-
-          
-    - name: Install dependencies
+    - name: Install uv
       run: |
-        poetry install --no-dev
-        
+        pip install uv
+
+    - name: Install dependencies with uv
+      run: |
+        uv pip install --system --no-deps .
+
     - name: Run scraper
       run: |
-        # poetry run scrapy crawl property_spider -a fast=1 -a urls=https://www.bazaraki.com/real-estate-to-rent,https://www.bazaraki.com/real-estate-for-sale
-        poetry run scrapy crawl property_spider -a  urls=https://www.bazaraki.com/real-estate-to-rent,https://www.bazaraki.com/real-estate-for-sale
+        scrapy crawl property_spider -a urls=https://www.bazaraki.com/real-estate-to-rent,https://www.bazaraki.com/real-estate-for-sale
         
     - name: Configure AWS credentials
       if: success()
@@ -49,11 +37,11 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1  # Change this to your preferred region
-        
+
     - name: Sync to S3
       if: success()
       run: |
-        poetry run aws s3 sync output s3://ab-users/grachev/bazaraki/output
+        aws s3 sync output s3://ab-users/grachev/bazaraki/output
         
     # - name: Upload artifacts on failure
     #   if: failure()
