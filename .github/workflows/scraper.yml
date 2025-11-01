@@ -22,13 +22,9 @@ jobs:
       run: |
         pip install uv
 
-    - name: Install dependencies with uv
-      run: |
-        uv pip install --system --no-deps .
-
     - name: Run scraper
       run: |
-        scrapy crawl property_spider -a urls=https://www.bazaraki.com/real-estate-to-rent,https://www.bazaraki.com/real-estate-for-sale
+        uv run scrapy crawl property_spider -a urls=https://www.bazaraki.com/real-estate-to-rent,https://www.bazaraki.com/real-estate-for-sale
         
     - name: Configure AWS credentials
       if: success()
@@ -38,10 +34,10 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1  # Change this to your preferred region
 
-    - name: Sync to S3
-      if: success()
-      run: |
-        aws s3 sync output s3://ab-users/grachev/bazaraki/output
+    # - name: Sync to S3
+    #   if: success()
+    #   run: |
+    #     aws s3 sync output s3://ab-users/grachev/bazaraki/output
         
     # - name: Upload artifacts on failure
     #   if: failure()
