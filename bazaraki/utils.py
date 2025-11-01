@@ -14,7 +14,6 @@ def filter_in(df, query: str) -> pd.DataFrame:
 
 
 def read_jsonl_files(path: str):
-    DT_LEN = len("2024-12-12 18:34:25")
     merged = pd.DataFrame()
     for file_name in sorted(glob("output/*.jsonl")):
         print(f"Reading {file_name}")
@@ -44,11 +43,18 @@ def read_jsonl_files(path: str):
         print(f"Total: {len(merged)} read: {len(newdf)} new: {len(new)} deleted: {new_deleted_count}")
     return merged
 
+def read_last_df(glob_pattern: str):
+    files = sorted(glob(glob_pattern))
+    if not files:
+        raise ValueError(f"No files found for pattern: {glob_pattern}")
+    last_file = files[-1]
+    print(f"Reading last file: {last_file}")
+    return read_df(last_file)
+
 def read_dfs(glob_pattern: str):
     """Reads multiple files by glob_pattern.
     For deleted items sets delete_date
     """
-    DT_LEN = len("2024-12-12 18:34:25")
     merged = pd.DataFrame()
     for file_name in sorted(glob(glob_pattern)):
         print(f"Reading {file_name}")
@@ -69,13 +75,20 @@ def read_dfs(glob_pattern: str):
             merged["delete_date"] = np.nan
             continue
         
+        # if delete_date is set in merged, but ad is present in newdf, reset delete_date
+        condition = merged.index.isin(newdf.index) & merged['delete_date'].notna()
+        merged.loc[condition, 'delete_date'] = np.nan
+        undeleted_count = condition.sum()
+        
+        # if delete_date is not set in merged, but ad is missing in newdf, set delete_date
         condition = ~merged.index.isin(newdf.index) & merged['delete_date'].isna()
         merged.loc[condition, 'delete_date'] = dt
         new_deleted_count = condition.sum()
 
         new = newdf.index.difference(merged.index)
         merged = pd.concat([merged, newdf.loc[new]])
-        print(f"Total: {len(merged)} read: {len(newdf)} new: {len(new)} deleted: {new_deleted_count}")
+        valid = merged.delete_date.isna().sum()
+        print(f"Total: {len(merged)} valid: {valid} read: {len(newdf)} new: {len(new)} deleted: {new_deleted_count} undeleted: {undeleted_count}")
     return merged
 
 def read_df(file_name: str | Path):
