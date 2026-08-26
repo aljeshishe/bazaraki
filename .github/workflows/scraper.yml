@@ -22,9 +22,45 @@ jobs:
       run: |
         pip install uv
 
+    # The site sits behind Cloudflare, which challenges datacenter IP ranges. Show
+    # plainly whether this runner can reach it at all before blaming the crawler.
+    - name: Check site reachability
+      run: |
+        for url in \
+          "https://www.bazaraki.com/robots.txt" \
+          "https://www.bazaraki.com/real-estate-to-rent/" \
+          "https://www.bazaraki.com/api/v2/spa/adverts/count/" ; do
+          code=$(curl -s -o /tmp/body -w '%{http_code}' --max-time 30 \
+            -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0" "$url")
+          echo "$code  $url"
+          if [ "$code" != "200" ]; then
+            echo "      mitigation: $(grep -o 'Just a moment\|Cloudflare\|blocked' /tmp/body | head -1)"
+          fi
+        done
+
     - name: Run scraper
+      env:
+        BAZARAKI_PROXY: ${{ secrets.BAZARAKI_PROXY }}
       run: |
         uv run scrapy crawl property_spider -a urls=https://www.bazaraki.com/real-estate-to-rent,https://www.bazaraki.com/real-estate-for-sale
+
+    # A crawl that scrapes nothing still exits 0 and still writes a file, which used to
+    # show up as a green run for weeks. Make an empty crawl fail loudly instead.
+    - name: Check crawl produced data
+      if: always()
+      run: |
+        tail -40 output/logs/*.log || true
+        uv run python - <<'PY'
+        import glob, sys
+        import pandas as pd
+        files = sorted(glob.glob("output/*.parquet"))
+        if not files:
+            sys.exit("No parquet written")
+        rows = len(pd.read_parquet(files[-1]))
+        print(f"{files[-1]}: {rows} ads")
+        if rows < 1000:
+            sys.exit(f"Crawl returned {rows} ads, expected tens of thousands")
+        PY
         
     - name: Configure AWS credentials
       if: success()
@@ -38,13 +74,11 @@ jobs:
       if: success()
       run: |
         aws s3 sync output s3://ab-users/grachev/bazaraki/output
-        
-    # - name: Upload artifacts on failure
-    #   if: failure()
-    #   uses: actions/upload-artifact@v3
-    #   with:
-    #     name: scraper-logs
-    #     path: |
-    #       **/*.log
-    #       output/
-    #     retention-days: 7
+
+    - name: Upload logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: scraper-logs
+        path: output/logs/
+        retention-days: 7
