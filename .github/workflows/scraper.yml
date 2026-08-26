@@ -37,9 +37,15 @@ jobs:
         if [ -n "$BAZARAKI_PROXY" ]; then proxy=yes; else proxy=no; fi
         echo "$code  $url  (proxy: $proxy)"
         if [ "$code" != "200" ]; then
-          echo "::error::Cloudflare is blocking this runner ($code, $(grep -o 'Just a moment\|Cloudflare' /tmp/body | head -1))."
-          echo "::error::GitHub-hosted runners sit in datacenter ranges the site refuses."
-          echo "::error::Set the BAZARAKI_PROXY secret, or run this job on a self-hosted runner."
+          # Which IP the site actually saw decides whether the proxy is even in the path.
+          echo "runner exit IP: $(curl -s --max-time 20 https://api.ipify.org || echo unknown)"
+          if [ -n "$BAZARAKI_PROXY" ]; then
+            echo "proxy  exit IP: $(curl -s --max-time 20 --proxy "$BAZARAKI_PROXY" https://api.ipify.org || echo 'unreachable')"
+          fi
+          echo "::error::Cloudflare is blocking this crawl ($code, $(grep -o 'Just a moment\|Cloudflare' /tmp/body | head -1))."
+          echo "::error::If the two IPs above match, the proxy is not being used; if they differ,"
+          echo "::error::the proxy's own range is blocked too — it needs to be a residential one."
+          echo "::error::Otherwise run this job on a self-hosted runner outside a datacenter range."
           exit 1
         fi
 
