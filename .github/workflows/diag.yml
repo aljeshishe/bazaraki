@@ -1,0 +1,45 @@
+name: Proxy diagnosis
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    # Same exit IP, same URL, three different TLS stacks. If curl is refused and
+    # python is not (or vice versa), the block keys on the client fingerprint
+    # rather than on the address the site sees.
+    - name: Compare clients through the proxy
+      env:
+        BAZARAKI_PROXY: ${{ secrets.BAZARAKI_PROXY }}
+      run: |
+        UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0"
+        U="https://www.bazaraki.com/api/v2/spa/adverts/count/"
+        echo "curl version: $(curl --version | head -1)"
+        echo "-- curl, 5 tries:"
+        for i in 1 2 3 4 5; do
+          echo "   $(curl -s -o /dev/null -w '%{http_code}' --max-time 25 --proxy "$BAZARAKI_PROXY" -A "$UA" "$U")  exit=$(curl -s --max-time 20 --proxy "$BAZARAKI_PROXY" https://api.ipify.org)"
+        done
+        pip install -q requests
+        echo "-- python requests, 5 tries:"
+        python - <<'PY'
+        import os, requests
+        p = {"http": os.environ["BAZARAKI_PROXY"], "https": os.environ["BAZARAKI_PROXY"]}
+        ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0"
+        for i in range(5):
+            try:
+                ip = requests.get("https://api.ipify.org", proxies=p, timeout=25).text
+                r = requests.get("https://www.bazaraki.com/api/v2/spa/adverts/count/",
+                                 proxies=p, headers={"User-Agent": ua}, timeout=25)
+                print(f"   {r.status_code}  exit={ip}")
+            except Exception as e:
+                print("   error", type(e).__name__, e)
+        PY
+        echo "-- direct, no proxy (expected 403 from a datacenter range):"
+        echo "   $(curl -s -o /dev/null -w '%{http_code}' --max-time 25 -A "$UA" "$U")"
