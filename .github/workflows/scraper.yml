@@ -30,22 +30,28 @@ jobs:
         BAZARAKI_PROXY: ${{ secrets.BAZARAKI_PROXY }}
       run: |
         url="https://www.bazaraki.com/api/v2/spa/adverts/count/"
-        code=$(curl -s -o /tmp/body -w '%{http_code}' --max-time 30 \
-          ${BAZARAKI_PROXY:+--proxy "$BAZARAKI_PROXY"} \
-          -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0" "$url")
         # Never echo the variable itself: it may carry credentials.
         if [ -n "$BAZARAKI_PROXY" ]; then proxy=yes; else proxy=no; fi
-        echo "$code  $url  (proxy: $proxy)"
-        if [ "$code" != "200" ]; then
+        # A rotating proxy hands out a different exit IP per connection and Cloudflare
+        # refuses some of them, so one 403 proves nothing. Only a clean sweep does.
+        ok=0
+        for attempt in 1 2 3 4 5; do
+          code=$(curl -s -o /tmp/body -w '%{http_code}' --max-time 30 \
+            ${BAZARAKI_PROXY:+--proxy "$BAZARAKI_PROXY"} \
+            -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0" "$url")
+          echo "  attempt $attempt: $code  (proxy: $proxy)"
+          [ "$code" = "200" ] && ok=1 && break
+        done
+        if [ "$ok" != "1" ]; then
           # Which IP the site actually saw decides whether the proxy is even in the path.
           echo "runner exit IP: $(curl -s --max-time 20 https://api.ipify.org || echo unknown)"
           if [ -n "$BAZARAKI_PROXY" ]; then
             echo "proxy  exit IP: $(curl -s --max-time 20 --proxy "$BAZARAKI_PROXY" https://api.ipify.org || echo 'unreachable')"
           fi
-          echo "::error::Cloudflare is blocking this crawl ($code, $(grep -o 'Just a moment\|Cloudflare' /tmp/body | head -1))."
-          echo "::error::If the two IPs above match, the proxy is not being used; if they differ,"
-          echo "::error::the proxy's own range is blocked too — it needs to be a residential one."
-          echo "::error::Otherwise run this job on a self-hosted runner outside a datacenter range."
+          echo "::error::Cloudflare refused all 5 attempts (last: $code, $(grep -o 'Just a moment\|Cloudflare' /tmp/body | head -1))."
+          echo "::error::If the two IPs above match, BAZARAKI_PROXY is not reaching the request."
+          echo "::error::If they differ, five rotated exit IPs in a row were refused, so the"
+          echo "::error::proxy pool itself is blocked — it needs residential, not datacenter, exits."
           exit 1
         fi
 

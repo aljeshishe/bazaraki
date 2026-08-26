@@ -112,6 +112,11 @@ AUTOTHROTTLE_TARGET_CONCURRENCY = 4.0
 #AUTOTHROTTLE_DEBUG = False
 
 RETRY_TIMES = 5
+# A rotating residential proxy hands out a fresh exit IP per connection, and Cloudflare
+# refuses some of them: roughly one request in five came back 403 in a 10-request sample.
+# Scrapy does not retry 403 by default, so those ads would be dropped without a trace —
+# a retry simply lands on another IP.
+RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408, 429, 403]
 
 # Enable and configure HTTP caching (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html#httpcache-middleware-settings
