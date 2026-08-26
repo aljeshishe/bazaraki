@@ -22,38 +22,37 @@ jobs:
       run: |
         pip install uv
 
-    # The site sits behind Cloudflare, which serves GitHub's runner ranges a JS
-    # challenge instead of content. Say so up front rather than spending an hour
-    # retrying 403s and reporting an empty crawl.
+    # Probe with the same stack the crawler uses. Cloudflare refuses curl outright
+    # from here — 5 of 5 — while python sails through on the very same proxy and exit
+    # IP, so a curl-based probe reports a block that the crawl itself never hits.
     - name: Check site reachability
       env:
         BAZARAKI_PROXY: ${{ secrets.BAZARAKI_PROXY }}
       run: |
-        url="https://www.bazaraki.com/api/v2/spa/adverts/count/"
-        # Never echo the variable itself: it may carry credentials.
-        if [ -n "$BAZARAKI_PROXY" ]; then proxy=yes; else proxy=no; fi
-        # A rotating proxy hands out a different exit IP per connection and Cloudflare
-        # refuses some of them, so one 403 proves nothing. Only a clean sweep does.
-        ok=0
-        for attempt in 1 2 3 4 5; do
-          code=$(curl -s -o /tmp/body -w '%{http_code}' --max-time 30 \
-            ${BAZARAKI_PROXY:+--proxy "$BAZARAKI_PROXY"} \
-            -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0" "$url")
-          echo "  attempt $attempt: $code  (proxy: $proxy)"
-          [ "$code" = "200" ] && ok=1 && break
-        done
-        if [ "$ok" != "1" ]; then
-          # Which IP the site actually saw decides whether the proxy is even in the path.
-          echo "runner exit IP: $(curl -s --max-time 20 https://api.ipify.org || echo unknown)"
-          if [ -n "$BAZARAKI_PROXY" ]; then
-            echo "proxy  exit IP: $(curl -s --max-time 20 --proxy "$BAZARAKI_PROXY" https://api.ipify.org || echo 'unreachable')"
-          fi
-          echo "::error::Cloudflare refused all 5 attempts (last: $code, $(grep -o 'Just a moment\|Cloudflare' /tmp/body | head -1))."
-          echo "::error::If the two IPs above match, BAZARAKI_PROXY is not reaching the request."
-          echo "::error::If they differ, five rotated exit IPs in a row were refused, so the"
-          echo "::error::proxy pool itself is blocked — it needs residential, not datacenter, exits."
-          exit 1
-        fi
+        python - <<'PY'
+        import os, sys, urllib.request
+        url = "https://www.bazaraki.com/api/v2/spa/adverts/count/"
+        proxy = os.environ.get("BAZARAKI_PROXY", "")
+        opener = urllib.request.build_opener(
+            urllib.request.ProxyHandler({"http": proxy, "https": proxy} if proxy else {}))
+        opener.addheaders = [("User-Agent",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0")]
+        # A rotating proxy hands out a fresh exit IP per connection and some are refused,
+        # so one rejection proves nothing — only a clean sweep does.
+        for attempt in range(1, 6):
+            try:
+                with opener.open(url, timeout=30) as r:
+                    print(f"  attempt {attempt}: {r.status} (proxy: {'yes' if proxy else 'no'})")
+                    if r.status == 200:
+                        sys.exit(0)
+            except Exception as e:
+                code = getattr(e, "code", type(e).__name__)
+                print(f"  attempt {attempt}: {code} (proxy: {'yes' if proxy else 'no'})")
+        print("::error::The site refused all 5 attempts.")
+        print("::error::Datacenter ranges are challenged by Cloudflare, so a runner needs a")
+        print("::error::working BAZARAKI_PROXY; check the secret, or use a self-hosted runner.")
+        sys.exit(1)
+        PY
 
     - name: Run scraper
       env:
