@@ -22,6 +22,8 @@ from pathlib import Path
 import anthropic
 import pandas as pd
 
+from bazaraki.utils import to_legacy_format
+
 # Load .env file if present (simple parser, no dotenv dependency required)
 _env_path = Path("/Users/alekseygrachev/git/bazaraki/.env")
 if _env_path.exists():
@@ -269,7 +271,7 @@ def pre_score(row: pd.Series) -> float:
 # ─────────────────────────────────────────────────────────────────────────────
 def build_candidates(out_dir: Path) -> list[dict]:
     print("\n=== STEP 1: Building candidates ===")
-    df = pd.read_parquet(PARQUET)
+    df = to_legacy_format(pd.read_parquet(PARQUET))
     df["city"] = df.location.fillna("").str.split(",").str[0].str.strip()
 
     f = df[

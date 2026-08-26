@@ -3,3 +3,4 @@
 output
 debug.log
 .venv*
+.env

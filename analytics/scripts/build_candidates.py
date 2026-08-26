@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from bazaraki.utils import to_legacy_format
+
 PARQUET = (
     "/Users/alekseygrachev/git/bazaraki/output/"
     "2026-05-17 11:22:54 real-estate-to-rent_real-estate-for-sale.parquet"
@@ -229,7 +231,7 @@ def pre_score(row: pd.Series) -> float:
 
 
 def main() -> None:
-    df = pd.read_parquet(PARQUET)
+    df = to_legacy_format(pd.read_parquet(PARQUET))
     df["city"] = df.location.fillna("").str.split(",").str[0].str.strip()
 
     f = df[
