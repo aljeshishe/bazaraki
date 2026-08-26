@@ -22,21 +22,26 @@ jobs:
       run: |
         pip install uv
 
-    # The site sits behind Cloudflare, which challenges datacenter IP ranges. Show
-    # plainly whether this runner can reach it at all before blaming the crawler.
+    # The site sits behind Cloudflare, which serves GitHub's runner ranges a JS
+    # challenge instead of content. Say so up front rather than spending an hour
+    # retrying 403s and reporting an empty crawl.
     - name: Check site reachability
+      env:
+        BAZARAKI_PROXY: ${{ secrets.BAZARAKI_PROXY }}
       run: |
-        for url in \
-          "https://www.bazaraki.com/robots.txt" \
-          "https://www.bazaraki.com/real-estate-to-rent/" \
-          "https://www.bazaraki.com/api/v2/spa/adverts/count/" ; do
-          code=$(curl -s -o /tmp/body -w '%{http_code}' --max-time 30 \
-            -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0" "$url")
-          echo "$code  $url"
-          if [ "$code" != "200" ]; then
-            echo "      mitigation: $(grep -o 'Just a moment\|Cloudflare\|blocked' /tmp/body | head -1)"
-          fi
-        done
+        url="https://www.bazaraki.com/api/v2/spa/adverts/count/"
+        code=$(curl -s -o /tmp/body -w '%{http_code}' --max-time 30 \
+          ${BAZARAKI_PROXY:+--proxy "$BAZARAKI_PROXY"} \
+          -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0" "$url")
+        # Never echo the variable itself: it may carry credentials.
+        if [ -n "$BAZARAKI_PROXY" ]; then proxy=yes; else proxy=no; fi
+        echo "$code  $url  (proxy: $proxy)"
+        if [ "$code" != "200" ]; then
+          echo "::error::Cloudflare is blocking this runner ($code, $(grep -o 'Just a moment\|Cloudflare' /tmp/body | head -1))."
+          echo "::error::GitHub-hosted runners sit in datacenter ranges the site refuses."
+          echo "::error::Set the BAZARAKI_PROXY secret, or run this job on a self-hosted runner."
+          exit 1
+        fi
 
     - name: Run scraper
       env:
