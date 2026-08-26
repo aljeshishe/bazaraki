@@ -50,9 +50,14 @@ ROBOTSTXT_OBEY = False
 #DOWNLOAD_DELAY = 3
 # The download delay setting will honor only one of:
 # The API answered 100 back-to-back requests without a single 429, unlike the HTML pages,
-# so a handful of parallel requests is safe. AutoThrottle still backs off if that changes.
+# so parallel requests are safe. Measured through the rotating proxy, whose per-request
+# latency is ~4x a direct connection: 4 threads gave 213 ads/min, 16 gave 823, 32 gave
+# 1100, and 64 got slower again. 16 is the knee — a full crawl in ~53 minutes, still
+# faster than a direct connection, without leaning on the site as hard as 32 would.
+# Note PER_IP overrides PER_DOMAIN when set, and CONCURRENT_REQUESTS caps both.
 #CONCURRENT_REQUESTS_PER_DOMAIN = 4
 CONCURRENT_REQUESTS_PER_IP = 16
+CONCURRENT_REQUESTS = 16
 
 # Disable cookies (enabled by default)
 #COOKIES_ENABLED = False
@@ -107,15 +112,16 @@ ITEM_PIPELINES = {
 AUTOTHROTTLE_ENABLED = True
 AUTOTHROTTLE_START_DELAY = 1
 AUTOTHROTTLE_MAX_DELAY = 60
-AUTOTHROTTLE_TARGET_CONCURRENCY = 4.0
+AUTOTHROTTLE_TARGET_CONCURRENCY = 16.0
 # Enable showing throttling stats for every response received:
 #AUTOTHROTTLE_DEBUG = False
 
 RETRY_TIMES = 5
-# A rotating residential proxy hands out a fresh exit IP per connection, and Cloudflare
-# refuses some of them: roughly one request in five came back 403 in a 10-request sample.
-# Scrapy does not retry 403 by default, so those ads would be dropped without a trace —
-# a retry simply lands on another IP.
+# A rotating residential proxy hands out a fresh exit IP per connection and Cloudflare
+# refuses some of them. Scrapy holds a keep-alive tunnel, so one good exit IP serves
+# hundreds of requests and refusals are rare — but when a tunnel is re-established onto
+# a bad IP, Scrapy does not retry 403 by default and those ads would be dropped without
+# a trace. A retry simply lands on another IP: a 400-ad run showed 4 retries, 0 dropped.
 RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408, 429, 403]
 
 # Enable and configure HTTP caching (disabled by default)
