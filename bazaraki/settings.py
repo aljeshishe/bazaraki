@@ -65,6 +65,11 @@ CONCURRENT_REQUESTS = 16
 # Disable Telnet Console (enabled by default)
 #TELNETCONSOLE_ENABLED = False
 
+# Cloudflare rejects Twisted's "DEFAULT" TLS cipher list via the proxy; Python's ssl default passes.
+DOWNLOADER_CLIENT_TLS_CIPHERS = "@SECLEVEL=2:ECDH+AESGCM:ECDH+CHACHA20:ECDH+AES:DHE+AES:!aNULL:!eNULL:!aDSS:!SHA1:!AESCCM"
+# Cloudflare rejects card requests whose Referer is the listing API URL.
+REFERER_ENABLED = False
+
 # Override the default request headers:
 DEFAULT_REQUEST_HEADERS = {
     "Host": "www.bazaraki.com",
@@ -140,7 +145,8 @@ FEED_EXPORT_ENCODING = "utf-8"
 LOG_ENABLED = False  
 # Custom logging configuration
 from datetime import datetime, timezone
-NOW_STR = datetime.now(tz=timezone.utc).isoformat(sep=" ", timespec="seconds")
+# No colons: actions/upload-artifact rejects them in file names.
+NOW_STR = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
 DEFAULT_LOGGING = {  
     "version": 1,  
     "disable_existing_loggers": False,  
