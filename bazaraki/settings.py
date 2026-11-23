@@ -59,8 +59,8 @@ ROBOTSTXT_OBEY = False
 CONCURRENT_REQUESTS_PER_IP = 16
 CONCURRENT_REQUESTS = 16
 
-# Disable cookies (enabled by default)
-#COOKIES_ENABLED = False
+# Once Cloudflare flags the session cookies, every request carrying them gets 403, whatever the exit IP.
+COOKIES_ENABLED = False
 
 # Disable Telnet Console (enabled by default)
 #TELNETCONSOLE_ENABLED = False
@@ -69,6 +69,8 @@ CONCURRENT_REQUESTS = 16
 DOWNLOADER_CLIENT_TLS_CIPHERS = "@SECLEVEL=2:ECDH+AESGCM:ECDH+CHACHA20:ECDH+AES:DHE+AES:!aNULL:!eNULL:!aDSS:!SHA1:!AESCCM"
 # Cloudflare rejects card requests whose Referer is the listing API URL.
 REFERER_ENABLED = False
+
+DOWNLOAD_HANDLERS = {"https": "bazaraki.handlers.FreshConnectionDownloadHandler"}
 
 # Override the default request headers:
 DEFAULT_REQUEST_HEADERS = {
