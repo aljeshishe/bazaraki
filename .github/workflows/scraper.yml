@@ -55,6 +55,7 @@ jobs:
         PY
 
     - name: Run scraper
+      timeout-minutes: 120
       env:
         BAZARAKI_PROXY: ${{ secrets.BAZARAKI_PROXY }}
       run: |
@@ -92,7 +93,7 @@ jobs:
         aws s3 sync output s3://ab-users/grachev/bazaraki/output
 
     - name: Upload logs on failure
-      if: failure()
+      if: failure() || cancelled()
       uses: actions/upload-artifact@v4
       with:
         name: scraper-logs
